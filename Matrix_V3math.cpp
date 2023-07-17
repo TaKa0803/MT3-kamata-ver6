@@ -2,6 +2,17 @@
 //#include<math.h>
 #include<cassert>
 #include<cmath>
+
+Matrix4x4 MakeAffineM(const Vector3& Sca, const Vector3& Rota, const Vector3& Trans) {
+
+	Matrix4x4 S = MakeScaleMatrix(Sca);
+	Matrix4x4 R = MakeAllRotateM(Rota);
+	Matrix4x4 T = MakeTranslateMatrix(Trans);
+
+	return Multiply(S, Multiply(R, T));
+}
+
+
 //平行移動
 Matrix4x4 MakeTranslateMatrix(const Vector3& T) {
 	return{

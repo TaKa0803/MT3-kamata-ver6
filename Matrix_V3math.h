@@ -1,6 +1,8 @@
 #pragma once
 #include<Vector3.h>
 #include<Matrix4x4.h>
+//アフィン
+Matrix4x4 MakeAffineM(const Vector3& S, const Vector3& R, const Vector3& T);
 
 //平行移動
 Matrix4x4 MakeTranslateMatrix(const Vector3& T);

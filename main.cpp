@@ -20,7 +20,7 @@ void MatrixScreenPrintf(int x, int y, const Matrix4x4& m, const char* label) {
 			Novice::ScreenPrintf(x + column * lColumnWidth, y + row * kRowHeight, "%6.02f", m.m[row][column]);
 		}
 	}
-	Novice::ScreenPrintf(x + lColumnWidth * 4, y, "&s", label);
+	Novice::ScreenPrintf(x + lColumnWidth * 4, y, "%s", label);
 }
 
 
@@ -34,12 +34,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	char keys[256] = {0};
 	char preKeys[256] = {0};
 
+	Vector3 scale{ 1.2f,0.79f,-2.1f };
 	Vector3 ratate{ 0.4f,1.43f,-0.8f };
-	Matrix4x4 roatateX = MakeRotateXM(ratate.x);
-	Matrix4x4 roatateY = MakeRotateYM(ratate.y);
-	Matrix4x4 roatateZ = MakeRotateZM(ratate.z);
-
-	Matrix4x4 RXYZ = MakeAllRotateM(ratate);
+	Vector3 translate{ 2.7f,-4.15f,1.57f };
+	Matrix4x4 worldM = MakeAffineM(scale, ratate, translate);
 
 	// ウィンドウの×ボタンが押されるまでループ
 	while (Novice::ProcessMessage() == 0) {
@@ -61,11 +59,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		///
 		/// ↓描画処理ここから
 		///
-		MatrixScreenPrintf(0, 0, roatateX, "RX");
-		MatrixScreenPrintf(0, kRowHeight*5, roatateY, "RY");
-		MatrixScreenPrintf(0, kRowHeight * 5*2, roatateZ, "RZ");
-		MatrixScreenPrintf(0, kRowHeight * 5 * 3, RXYZ, "ALL");
-
+		MatrixScreenPrintf(0, 0, worldM, "World");
 
 		///
 		/// ↑描画処理ここまで
