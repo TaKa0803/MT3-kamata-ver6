@@ -2,8 +2,9 @@
 #include<Vector3.h>
 #include<Matrix_V3math.h>
 
-const char kWindowTitle[] = "LE2A";
+const char kWindowTitle[] = "LE2A_05_キクチ_タカヤ";
 
+static const int kRowHeight = 20;
 static const int lColumnWidth = 60;
 void VectorScreenPrintf(int x, int y, const Vector3& vector, const char* label) {
 	Novice::ScreenPrintf(x, y, "%.02f", vector.x);
@@ -11,6 +12,15 @@ void VectorScreenPrintf(int x, int y, const Vector3& vector, const char* label) 
 	Novice::ScreenPrintf(x + lColumnWidth * 2, y, "%.02f", vector.z);
 	Novice::ScreenPrintf(x + lColumnWidth * 3, y, "%s", label);
 
+}
+
+void MatrixScreenPrintf(int x, int y, const Matrix4x4& m, const char* label) {
+	for (int row = 0; row < 4; ++row) {
+		for (int column = 0; column < 4; ++column) {
+			Novice::ScreenPrintf(x + column * lColumnWidth, y + row * kRowHeight, "%6.02f", m.m[row][column]);
+		}
+	}
+	Novice::ScreenPrintf(x + lColumnWidth * 4, y, "&s", label);
 }
 
 
@@ -24,19 +34,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	char keys[256] = {0};
 	char preKeys[256] = {0};
 
+	Vector3 ratate{ 0.4f,1.43f,-0.8f };
+	Matrix4x4 roatateX = MakeRotateXM(ratate.x);
+	Matrix4x4 roatateY = MakeRotateYM(ratate.y);
+	Matrix4x4 roatateZ = MakeRotateZM(ratate.z);
 
-	Vector3 v1{ 1.0f,3.0f,-5.0f };
-	Vector3 v2{ 4.0f,-1.0f,2.0f };
-	float k = { 4.0f };
-
-	Vector3 resultAdd = Add(v1, v2);
-	Vector3 resultSub = Subtract(v1,v2);
-	Vector3 resultMultiply = Multiply(k, v1);
-	float resultDot = Dot(v1, v2);
-	float resultLength = Length(v1);
-	Vector3 resultNormalize = Normalize(v2);
-
-	int kRowHeight = 15;
+	Matrix4x4 RXYZ = MakeAllRotateM(ratate);
 
 	// ウィンドウの×ボタンが押されるまでループ
 	while (Novice::ProcessMessage() == 0) {
@@ -58,12 +61,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		///
 		/// ↓描画処理ここから
 		///
-		VectorScreenPrintf(0, 0, resultAdd, ": Add");
-		VectorScreenPrintf(0, kRowHeight, resultSub, ":Subtract");
-		VectorScreenPrintf(0, kRowHeight*2, resultMultiply, ":Multiply");
-		Novice::ScreenPrintf(0, kRowHeight * 3, "%.02f:Dot", resultDot);
-		Novice::ScreenPrintf(0, kRowHeight * 4, "%.02f:Dot", resultLength);
-		VectorScreenPrintf(0, kRowHeight * 5, resultNormalize, ":Normalize");
+		MatrixScreenPrintf(0, 0, roatateX, "RX");
+		MatrixScreenPrintf(0, kRowHeight*5, roatateY, "RY");
+		MatrixScreenPrintf(0, kRowHeight * 5*2, roatateZ, "RZ");
+		MatrixScreenPrintf(0, kRowHeight * 5 * 3, RXYZ, "ALL");
+
 
 		///
 		/// ↑描画処理ここまで
