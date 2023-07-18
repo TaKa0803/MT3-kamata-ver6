@@ -3,6 +3,41 @@
 #include<cassert>
 #include<cmath>
 
+//クロス積
+Vector3 Cross(const Vector3& v1, const Vector3& v2) {
+	return { v1.y * v2.z - v1.z * v2.y,v1.z * v2.x - v1.x * v2.z,v1.x * v2.y - v1.y * v2.x };
+}
+
+
+//投資投影
+Matrix4x4 MakePerspectiveFovM(float fovY, float aspectRatio, float nearClip, float farClip) {
+	return{
+		(1.0f / aspectRatio)* (1.0f / std::tan(fovY/2.0f)),0,0,0,
+		0,(1.0f/std::tan(fovY/2.0f)),0,0,
+		0,0,farClip/(farClip-nearClip),1,
+		0,0,(-nearClip * farClip) /(farClip-nearClip),0
+	};
+}
+//正射影行列
+Matrix4x4 MakeOrthographicM(float left, float top, float right, float bottom, float nearClip, float farClip) {
+	return {
+		2.0f/(right-left),0,0,0,
+		0,2.0f/(top-bottom),0,0,
+		0,0,1.0f/(farClip-nearClip),0,
+		(left+right)/(left-right),(top+bottom)/(bottom-top),nearClip/(nearClip-farClip),1
+	};
+
+}
+//ビューポート変換行列
+Matrix4x4 MakeViewportM(float left, float top, float width, float height, float minDepth, float maxDepth) {
+	return{
+		width/2.0f,0,0,0,
+		0,-height/2.0f,0,0,
+		0,0,maxDepth-minDepth,0,
+		left+(width/2.0f),top+(height/2.0f),minDepth,1
+	};
+}
+
 Matrix4x4 MakeAffineM(const Vector3& Sca, const Vector3& Rota, const Vector3& Trans) {
 
 	Matrix4x4 S = MakeScaleMatrix(Sca);
@@ -41,12 +76,16 @@ Vector3 Transform(const Vector3& v, const Matrix4x4& m) {
 	float w = v.x * m.m[0][3] + v.y * m.m[1][3] + v.z * m.m[2][3] + 1.0f * m.m[3][3];
 	
 	assert(w != 0);
-
-	return {
-		result.x / w,
-		result.y / w,
-		result.z / w,
-	};
+	if (w != 0) {
+		return {
+			result.x / w,
+			result.y / w,
+			result.z / w,
+		};
+	}
+	else {
+		return result;
+	}
 }
 
 //x軸回転行列

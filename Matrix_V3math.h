@@ -1,6 +1,18 @@
 #pragma once
 #include<Vector3.h>
 #include<Matrix4x4.h>
+
+//クロス積
+Vector3 Cross(const Vector3& v1, const Vector3& v2);
+
+//投資投影
+Matrix4x4 MakePerspectiveFovM(float fovY, float aspectRatio, float nearClip, float farClip);
+//正射影行列
+Matrix4x4 MakeOrthographicM(float left, float top, float right, float bottom, float nearClip, float farClip);
+//ビューポート変換行列
+Matrix4x4 MakeViewportM(float left, float top, float width, float height, float minDepth, float maxDepth);
+
+
 //アフィン
 Matrix4x4 MakeAffineM(const Vector3& S, const Vector3& R, const Vector3& T);
 
