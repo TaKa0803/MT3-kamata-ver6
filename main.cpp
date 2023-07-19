@@ -255,30 +255,6 @@ void CheckswitchAABB(AABB& a) {
 
 }
 
-bool InCollision(const AABB& a, const AABB& b) {
-
-	if ((a.min.x <= b.max.x && a.max.x >= b.min.x) &&//x軸
-		(a.min.y <= b.max.y && a.max.y >= b.min.y) &&
-		(a.min.z <= b.max.z && a.max.z >= b.min.z)
-		) {
-		return true;
-	}
-	return false;
-}
-
-bool InCollision(const AABB& a, const Sphere& s) {
-	//最近接点を求める
-	Vector3 closestPoint{ std::clamp(s.center.x,a.min.x,a.max.x),
-	std::clamp(s.center.y,a.min.y,a.max.y),
-	std::clamp(s.center.z,a.min.z,a.max.z)
-	};
-
-	//最近接点と球の中心との距離を求める
-	float dis = Length(closestPoint);
-	//距離が半径よりも小さければ衝突
-	if (dis <= s.radius) { return true; }
-	return false;
-}
 
 
 //デバッグ関数
@@ -499,6 +475,38 @@ bool InCollision(const Segment& segment, const Triangle& triangle) {
 	}
 	return false;
 }
+//AABB同士
+bool InCollision(const AABB& a, const AABB& b) {
+
+	if ((a.min.x <= b.max.x && a.max.x >= b.min.x) &&//x軸
+		(a.min.y <= b.max.y && a.max.y >= b.min.y) &&
+		(a.min.z <= b.max.z && a.max.z >= b.min.z)
+		) {
+		return true;
+	}
+	return false;
+}
+//AABBと円
+bool InCollision(const AABB& a, const Sphere& s, const Matrix4x4& vpMatrix, const Matrix4x4& viewportMatrix) {
+	//最近接点を求める
+	Vector3 closestPoint{ std::clamp(s.center.x,a.min.x,a.max.x),
+	std::clamp(s.center.y,a.min.y,a.max.y),
+	std::clamp(s.center.z,a.min.z,a.max.z)
+	};
+	Sphere S{
+		.center = closestPoint,
+		.radius = 0.01f,
+	};
+	DrawSphere(S, vpMatrix, viewportMatrix, WHITE);
+
+	Vector3 V = Subtract(closestPoint, s.center);
+
+	//最近接点と球の中心との距離を求める
+	float dis = Length(V);
+	//距離が半径よりも小さければ衝突
+	if (dis <= s.radius) { return true; }
+	return false;
+}
 
 
 
@@ -530,9 +538,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		.max{0.0f,0.0f,0.0f},
 	};
 
-	AABB aabb2{
-		.min{0.2f,0.2f,0.2f},
-		.max{1.0f,1.0f,1.0f},
+	Sphere S{
+		.center{0,0,0},
+		.radius{0.5},
 	};
 #pragma endregion
 
@@ -572,14 +580,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		
 #pragma region jugyou
 		DebugAABB(aabb1,"aabb1");
-		DebugAABB(aabb2, "aabb2");
-
-		CheckswitchAABB(aabb1);
-		CheckswitchAABB(aabb2);
-
+		DebugSphere(S, "Sphere");
+		
 #pragma endregion
 
-		if (InCollision(aabb1,aabb2)) {
+		if (InCollision(aabb1,S,VP,viewportM)) {
 			color = RED;
 		}
 		else {
@@ -594,7 +599,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		///
 		
 		DrawAABB(aabb1,VP,viewportM,color);
-		DrawAABB(aabb2, VP, viewportM,color);
+		DrawSphere(S, VP, viewportM, color);
 		///
 		/// ↑描画処理ここまで
 		///
