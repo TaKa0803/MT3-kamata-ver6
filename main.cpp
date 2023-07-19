@@ -5,8 +5,8 @@
 #include<cmath>
 #include<numbers>
 #include<imgui.h>
-
-
+#include <algorithm>
+#include<iostream>
 struct vec {
 	int x;
 	int y;
@@ -32,6 +32,21 @@ struct Sphere {
 struct Segment {
 	Vector3 origin;
 	Vector3 diff;
+};
+
+struct Plane
+{
+	Vector3 normal;
+	float distance;
+};
+
+struct Triangle {
+	Vector3 verties[3];//頂点
+};
+
+struct AABB {
+	Vector3 min;
+	Vector3 max;
 };
 
 const char kWindowTitle[] = "LE2A_05_キクチ_タカヤ";
@@ -117,6 +132,7 @@ void DrawGrid(const Matrix4x4& vprojection, const Matrix4x4& viewport) {
 		}
 	}
 }
+
 //円描画
 void DrawSphere(const Sphere& S, const Matrix4x4& vpM, const Matrix4x4& viewport, uint32_t color) {
 	const uint32_t kSubdivision = 16;//分割数
@@ -151,6 +167,121 @@ void DrawSphere(const Sphere& S, const Matrix4x4& vpM, const Matrix4x4& viewport
 	}
 }
 
+Vector3 Perpendicular(const Vector3& vector) {
+	if (vector.x != 0.0f || vector.y != 0.0f) {
+		return { -vector.y,vector.x,0.0f };
+	}
+	return{ 0.0f,-vector.z,vector.y };
+}
+
+void DrawPlane(const Plane& plane, const Matrix4x4& viewprojectionM, const Matrix4x4& viewportM,uint32_t color) {
+	Vector3 center = Multiply(plane.distance, plane.normal);
+	Vector3 perpendiculars[4];
+	perpendiculars[0] = Normalize(Perpendicular(plane.normal));
+	perpendiculars[1] = { -perpendiculars[0].x,-perpendiculars[0].y,-perpendiculars[0].z };
+	perpendiculars[2] = Cross(plane.normal, perpendiculars[0]);
+	perpendiculars[3] = { perpendiculars[2].x,-perpendiculars[2].y,-perpendiculars[2].z };
+
+	Vector3 points[4];
+	for (int32_t index = 0; index < 4; ++index) {
+		Vector3 extend = Multiply(2.0f, perpendiculars[index]);
+		Vector3 point = Add(center, extend);
+		points[index] = Transform(Transform(point, viewprojectionM), viewportM);
+	}
+	Novice::DrawLine((int)points[0].x, (int)points[0].y, (int)points[2].x, (int)points[2].y, color);
+	Novice::DrawLine((int)points[0].x, (int)points[0].y, (int)points[3].x, (int)points[3].y, color);
+	Novice::DrawLine((int)points[1].x, (int)points[1].y, (int)points[2].x, (int)points[2].y, color);
+	Novice::DrawLine((int)points[1].x, (int)points[1].y, (int)points[3].x, (int)points[3].y, color);
+}
+
+void DrawTriangle(const Triangle& triangle, const Matrix4x4& viewprojectionM, const Matrix4x4& viewport,uint32_t color) {
+	Vector3 reP[3];
+	for (int i = 0; i < 3; i++) {
+		reP[i] = Transform(Transform(triangle.verties[i], viewprojectionM), viewport);
+	}
+	Novice::DrawLine((int)reP[0].x, (int)reP[0].y, (int)reP[1].x, (int)reP[1].y, color);
+	Novice::DrawLine((int)reP[0].x, (int)reP[0].y, (int)reP[2].x, (int)reP[2].y, color);
+	Novice::DrawLine((int)reP[2].x, (int)reP[2].y, (int)reP[1].x, (int)reP[1].y, color);
+
+}
+
+
+void DrawAABB(const AABB& aabb, const Matrix4x4& vpMatrix, const Matrix4x4& viewportMatrix, uint32_t color) {
+	Vector3 a, b, c, d, e, f, g, h;
+
+	Vector3 side = Subtract(aabb.max, aabb.min);
+
+	a = Transform(Transform(aabb.min, vpMatrix), viewportMatrix);
+	b = Transform(Transform(Add(aabb.min, { side.x,0,0 }), vpMatrix), viewportMatrix);
+	c = Transform(Transform(Add(aabb.min, { 0,side.y,0 }), vpMatrix), viewportMatrix);
+	d = Transform(Transform(Add(aabb.min, { side.x,side.y,0 }), vpMatrix), viewportMatrix);
+
+	e = Transform(Transform(aabb.max, vpMatrix), viewportMatrix);
+	f = Transform(Transform(Add(aabb.max, { -side.x,0,0 }), vpMatrix), viewportMatrix);
+	g = Transform(Transform(Add(aabb.max, { 0,-side.y,0 }), vpMatrix), viewportMatrix);
+	h = Transform(Transform(Add(aabb.max, { -side.x,-side.y,0 }), vpMatrix), viewportMatrix);
+
+
+	Novice::DrawLine((int)a.x, (int)a.y, (int)b.x, (int)b.y, color);
+	Novice::DrawLine((int)a.x, (int)a.y, (int)c.x, (int)c.y, color);
+	Novice::DrawLine((int)d.x, (int)d.y, (int)b.x, (int)b.y, color);
+	Novice::DrawLine((int)d.x, (int)d.y, (int)c.x, (int)c.y, color);
+
+	Novice::DrawLine((int)a.x, (int)a.y, (int)h.x, (int)h.y, color);
+	Novice::DrawLine((int)e.x, (int)e.y, (int)d.x, (int)d.y, color);
+	Novice::DrawLine((int)b.x, (int)b.y, (int)g.x, (int)g.y, color);
+	Novice::DrawLine((int)c.x, (int)c.y, (int)f.x, (int)f.y, color);
+
+
+
+	Novice::DrawLine((int)e.x, (int)e.y, (int)f.x, (int)f.y, color);
+	Novice::DrawLine((int)e.x, (int)e.y, (int)g.x, (int)g.y, color);
+	Novice::DrawLine((int)h.x, (int)h.y, (int)f.x, (int)f.y, color);
+	Novice::DrawLine((int)h.x, (int)h.y, (int)g.x, (int)g.y, color);
+
+}
+
+void CheckswitchAABB(AABB& a) {
+	Vector3 max, min;
+	min.x = (std::min)(a.min.x, a.max.x);
+	min.y = (std::min)(a.min.y, a.max.y);
+	min.z = (std::min)(a.min.z, a.max.z);
+
+	max.x = (std::max)(a.min.x, a.max.x);
+	max.y = (std::max)(a.min.y, a.max.y);
+	max.z = (std::max)(a.min.z, a.max.z);
+	a.max = max;
+	a.min = min;
+
+}
+
+bool InCollision(const AABB& a, const AABB& b) {
+
+	if ((a.min.x <= b.max.x && a.max.x >= b.min.x) &&//x軸
+		(a.min.y <= b.max.y && a.max.y >= b.min.y) &&
+		(a.min.z <= b.max.z && a.max.z >= b.min.z)
+		) {
+		return true;
+	}
+	return false;
+}
+
+bool InCollision(const AABB& a, const Sphere& s) {
+	//最近接点を求める
+	Vector3 closestPoint{ std::clamp(s.center.x,a.min.x,a.max.x),
+	std::clamp(s.center.y,a.min.y,a.max.y),
+	std::clamp(s.center.z,a.min.z,a.max.z)
+	};
+
+	//最近接点と球の中心との距離を求める
+	float dis = Length(closestPoint);
+	//距離が半径よりも小さければ衝突
+	if (dis <= s.radius) { return true; }
+	return false;
+}
+
+
+//デバッグ関数
 void DebugSphere(Sphere& S,const char*label) {
 	ImGui::Begin(label);
 	ImGui::DragFloat3("S center", &S.center.x, 0.01f);
@@ -162,7 +293,12 @@ void DebugV3(Vector3& v, const char* label) {
 	ImGui::DragFloat3("V3", &v.x, 0.01f);
 	ImGui::End();
 }
-
+void DebugAABB(AABB& aabb, const char* label) {
+	ImGui::Begin(label);
+	ImGui::DragFloat3("max", &aabb.max.x, 0.01f);
+	ImGui::DragFloat3("min", &aabb.min.x, 0.01f);
+	ImGui::End();
+}
 
 bool CmeraMove(WorldTransform &camera,char key[],mouse m) {
 	//原点からカメラへのベクトル
@@ -216,6 +352,155 @@ bool InCollision(const Sphere& s1, const Sphere& s2) {
 	}
 	return false;
 }
+//円と面
+bool InCollision(const Sphere& sphere, const Plane& plane) {
+	Vector3 v1 = sphere.center;
+	Vector3 v2 = Multiply(plane.distance, plane.normal);
+	if (Length(Subtract(v1, v2)) <= sphere.radius) {
+		return true;
+	}
+	return false;
+}
+//線分内に点があるか
+bool PointInLine(const Vector3 a, const Vector3 LS, const Vector3 LE) {
+	//x軸	
+	if (LS.x == LE.x) {//垂直
+		//設置点aが垂直線の中ではないならfalse
+		if (LS.x != a.x) {
+			return false;
+		}
+	}
+	else if (LS.x < LE.x) {//LS.xがLE.xより小さい場合の範囲計算
+		//xの線の範囲にaがいなければfalse
+		if (a.x < LS.x || LE.x < a.x) {
+			return false;
+		}
+	}
+	else if (LS.x > LE.x) {//LS.xがLE.xより大きい場合の範囲計算
+		//線の範囲内にaがいなければfalse
+		if (a.x < LE.x || LS.x < a.x) {
+			return false;
+		}
+	}
+
+	//y軸	
+	if (LS.y == LE.y) {//垂直
+		//設置点aが垂直線の中ではないならfalse
+		if (LS.y != a.y) {
+			return false;
+		}
+	}
+	else if (LS.y < LE.y) {//LS.xがLE.xより小さい場合の範囲計算
+		//xの線の範囲にaがいなければfalse
+		if (a.y < LS.y || LE.y < a.y) {
+			return false;
+		}
+	}
+	else if (LS.y > LE.y) {//LS.xがLE.xより大きい場合の範囲計算
+		//線の範囲内にaがいなければfalse
+		if (a.y < LE.y || LS.y < a.y) {
+			return false;
+		}
+	}
+
+	//z軸	
+	if (LS.z == LE.z) {//垂直
+		//設置点aが垂直線の中ではないならfalse
+		if (LS.z != a.z) {
+			return false;
+		}
+	}
+	else if (LS.z < LE.z) {//LS.xがLE.xより小さい場合の範囲計算
+		//xの線の範囲にaがいなければfalse
+		if (a.z < LS.z || LE.z < a.z) {
+			return false;
+		}
+	}
+	else if (LS.z > LE.z) {//LS.xがLE.xより大きい場合の範囲計算
+		//線の範囲内にaがいなければfalse
+		if (a.z < LE.z || LS.z < a.z) {
+			return false;
+		}
+	}
+
+	return true;
+}
+//線と面
+bool InCollision(const Segment& segment, const Plane& plane, const Matrix4x4& vpM, const Matrix4x4& viewport) {
+	//法線と線の内積
+	float dot = Dot(plane.normal, segment.diff);
+	if (dot == 0.0f) {
+		return false;
+	}
+	else {
+		//tを求める
+		float t = (plane.distance - Dot(segment.origin, plane.normal)) / dot;
+
+		Vector3 a = Add(segment.origin, Multiply(t, segment.diff));
+		Sphere S = { .center = a,.radius = 0.01f, };
+		DrawSphere(S, vpM, viewport,WHITE);
+
+
+		ImGui::Begin("S");
+		ImGui::Text("%4.1f/%4.1f/%4.1f", a.x, a.y, a.z);
+		ImGui::End();
+
+		Vector3 LS = segment.origin;
+		Vector3 LE = Add(segment.origin, segment.diff);
+
+		if (PointInLine(a, LS, LE)) {
+			return true;
+		}
+		else {
+			return false;
+		}
+
+		
+	}
+}
+//線と三角形
+bool InCollision(const Segment& segment, const Triangle& triangle) {
+	//三角形の法線
+	Vector3 AB = Subtract(triangle.verties[1], triangle.verties[0]);
+	Vector3 AC = Subtract(triangle.verties[2], triangle.verties[0]);
+	Vector3 normal = Normalize(Cross(AB, AC));
+	//線と三角形の法線の内積
+	float dot = Dot(normal, segment.diff);
+	if (dot == 0.0f) {
+		return false;
+	}
+	else {
+		//tを求める
+		float t(0 - Dot(segment.origin, normal) / dot);
+
+		Vector3 a = Add(segment.origin, Multiply(t, segment.diff));
+
+		Vector3 LS = segment.origin;
+		Vector3 LE = Add(segment.origin, segment.diff);
+		//線の接点が線分内にあるなら
+		if (PointInLine(a, LS, LE)) {
+
+			Vector3 v01 = Subtract(triangle.verties[1], triangle.verties[0]);
+			Vector3 v12 = Subtract(triangle.verties[2], triangle.verties[1]);
+			Vector3 v20 = Subtract(triangle.verties[0], triangle.verties[2]);
+
+			Vector3 v1p = Subtract(a, triangle.verties[1]);
+			Vector3 v2p = Subtract(a, triangle.verties[2]);
+			Vector3 v0p = Subtract(a, triangle.verties[0]);
+
+			Vector3 ross01 = Cross(v01, v0p);
+			Vector3 ross12 = Cross(v12, v1p);
+			Vector3 ross20 = Cross(v20, v2p);
+
+			if (Dot(ross01, normal) >= 0.0f && Dot(ross12, normal) >= 0.0f && Dot(ross20, normal) >= 0.0f) {
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+
 
 
 // Windowsアプリでのエントリーポイント(main関数)
@@ -240,13 +525,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	uint32_t color = WHITE;
 	
 #pragma region 授業
-	Sphere S1{
-		.center{0,0,0},
-		.radius{0.5},
+	AABB aabb1{
+		.min{-0.5f,-0.5f,-0.5f},
+		.max{0.0f,0.0f,0.0f},
 	};
-	Sphere S2{
-		.center{0,-2,0},
-		.radius{0.5},
+
+	AABB aabb2{
+		.min{0.2f,0.2f,0.2f},
+		.max{1.0f,1.0f,1.0f},
 	};
 #pragma endregion
 
@@ -272,7 +558,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		ImGui::End();
 
 		
-
 		///
 		/// ↓更新処理ここから
 		///
@@ -286,18 +571,20 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		Matrix4x4 VP = Multiply(viewM, projectionM);
 		
 #pragma region jugyou
-		DebugSphere(S1,"S1");
-		DebugSphere(S2, "S2");
+		DebugAABB(aabb1,"aabb1");
+		DebugAABB(aabb2, "aabb2");
 
-		if (InCollision(S1, S2)) {
+		CheckswitchAABB(aabb1);
+		CheckswitchAABB(aabb2);
+
+#pragma endregion
+
+		if (InCollision(aabb1,aabb2)) {
 			color = RED;
 		}
 		else {
 			color = WHITE;
 		}
-
-#pragma endregion
-
 		///
 		/// ↑更新処理ここまで
 		///
@@ -306,11 +593,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		/// ↓描画処理ここから
 		///
 		
-		DrawSphere(S1, VP, viewportM, color);
-		DrawSphere(S2, VP, viewportM, color);
-
-		
-		
+		DrawAABB(aabb1,VP,viewportM,color);
+		DrawAABB(aabb2, VP, viewportM,color);
 		///
 		/// ↑描画処理ここまで
 		///
