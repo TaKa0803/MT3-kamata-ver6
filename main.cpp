@@ -531,7 +531,7 @@ float ParameterT(Plane P,Segment S) {
 	return t;
 }
 
-bool InCollision(const AABB& AA, const Segment& S) {
+bool InCollision(const AABB& AA, const Segment& S, const Matrix4x4& vpMatrix, const Matrix4x4& viewportMatrix) {
 
 	//assert(S.diff == { 0,0,0 });
 
@@ -573,13 +573,13 @@ bool InCollision(const AABB& AA, const Segment& S) {
 
 	
 	//tを求める
-	float tXmin = (AA.min.x - S.origin.x) / Dot(bx,S.diff);
-	float tYmin = (AA.min.y - S.origin.y) / Dot(by,S.diff);
-	float tZmin = (AA.min.z - S.origin.z) / Dot(bz,S.diff);
+	float tXmin = (AA.min.x - S.origin.x) / S.diff.x;
+	float tYmin = (AA.min.y - S.origin.y) / S.diff.y;
+	float tZmin = (AA.min.z - S.origin.z) / S.diff.z;
 
-	float tXmax = (AA.max.x - S.origin.x) / Dot(bx,S.diff);
-	float tYmax = (AA.max.y - S.origin.y) / Dot(by,S.diff);
-	float tZmax = (AA.max.z - S.origin.z) / Dot(bz,S.diff);
+	float tXmax = (AA.max.x - S.origin.x) /S.diff.x;
+	float tYmax = (AA.max.y - S.origin.y) / S.diff.y;
+	float tZmax = (AA.max.z - S.origin.z) / S.diff.z;
 
 
 	float tNearX = min(tXmin, tXmax);
@@ -593,9 +593,24 @@ bool InCollision(const AABB& AA, const Segment& S) {
 
 	float tmin = max(max(tNearX, tNearY), tNearZ);
 	float tmax = min(min(tFarX, tFarY), tFarZ);
+
+	Vector3 a = Add(S.origin, Multiply(tmin, S.diff));
+	Sphere SA = { .center = a,.radius = 0.01f, };
+	DrawSphere(SA, vpMatrix, viewportMatrix, WHITE);
+
+	Vector3 b = Add(S.origin, Multiply(tmax, S.diff));
+	Sphere Sp = { .center = b,.radius = 0.01f, };
+	DrawSphere(Sp, vpMatrix, viewportMatrix, WHITE);
+
+	Vector3 LS, LE;
+	LS = S.origin;
+	LE = S.origin + S.diff;
 	if (tmin <= tmax) {
-		//衝突
-		return true;
+		if (PointInLine(a, LS, LE) || PointInLine(b, LS, LE)) {
+			//衝突
+			return true;
+		}
+		
 	}
 	
 	/*
@@ -690,7 +705,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 #pragma endregion
 
-		if (InCollision(aabb1,S)) {
+		if (InCollision(aabb1,S,VP,viewportM)) {
 			color = RED;
 		}
 		else {
