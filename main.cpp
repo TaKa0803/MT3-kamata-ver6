@@ -8,6 +8,13 @@
 #include <algorithm>
 #include<iostream>
 #include<cassert>
+
+//オーバーロード演算子
+Vector3 operator+(Vector3 a, Vector3 b) {
+	return Add(a, b);
+}
+
+
 struct vec {
 	int x;
 	int y;
@@ -48,6 +55,13 @@ struct Triangle {
 struct AABB {
 	Vector3 min;
 	Vector3 max;
+};
+
+struct Bezier {
+	Vector3 controllP0;
+	Vector3 controllP1;
+	Vector3 controllP2;
+
 };
 
 const char kWindowTitle[] = "LE2A_05_キクチ_タカヤ";
@@ -264,8 +278,32 @@ void CheckswitchAABB(AABB& a) {
 
 }
 
-Vector3 operator+(Vector3 a, Vector3 b) {
-	return Add(a, b);
+Vector3 Leap(const Vector3& v1, const Vector3& v2, float t) {
+	return {
+		v1.x * (1.0f - t) + v2.x * t,
+		v1.y * (1.0f - t) + v2.y * t,
+		v1.z * (1.0f - t) + v2.z * t,
+	};
+
+}
+void DrawBezier(const Bezier& B, const Matrix4x4& VP, Matrix4x4 viewport,uint32_t color) {
+	const float kSubdivision = 32;//分割数
+	float t = 0;
+	//過去座標
+	Vector3 bpos = B.controllP0;
+	for (int i = 0; i <= 32; i++) {
+		t += (1.0f / kSubdivision);
+		Vector3 p0p1 = Leap(B.controllP0, B.controllP1, t);
+		Vector3 p1p2 = Leap(B.controllP1, B.controllP2, t);
+		Vector3 p = Leap(p0p1, p1p2, t);
+
+		Vector3 world = Transform(Transform(p, VP), viewport);
+		Vector3 bp = Transform(Transform(bpos, VP), viewport);
+
+		Novice::DrawLine((int)bp.x, (int)bp.y, (int)world.x, (int)world.y, color);
+		//過去位置を更新
+		bpos = p;
+	}
 }
 
 //デバッグ関数
@@ -286,6 +324,14 @@ void DebugAABB(AABB& aabb, const char* label) {
 	ImGui::DragFloat3("min", &aabb.min.x, 0.01f);
 	ImGui::End();
 }
+void DebugBezier(Bezier& B, const char* label) {
+	ImGui::Begin(label);
+	ImGui::DragFloat3("p0", &B.controllP0.x, 0.01f);
+	ImGui::DragFloat3("p1", &B.controllP1.x, 0.01f);
+	ImGui::DragFloat3("p2", &B.controllP2.x, 0.01f);
+	ImGui::End();
+}
+
 
 bool CmeraMove(WorldTransform &camera,char key[],mouse m) {
 	//原点からカメラへのベクトル
@@ -653,14 +699,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	uint32_t color = WHITE;
 	
 #pragma region 授業
-	AABB aabb1{
-		.min{-0.5f,-0.5f,-0.5f},
-		.max{0.5f,0.5f,0.5f},
-	};
-
-	Segment S{
-		.origin{0,0,0},
-		.diff{1,1,1},
+	Bezier B{
+		.controllP0{0,0,0},
+		.controllP1{1,1,0},
+		.controllP2{2,0,0}
 	};
 #pragma endregion
 
@@ -699,18 +741,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		Matrix4x4 VP = Multiply(viewM, projectionM);
 		
 #pragma region jugyou
-		DebugAABB(aabb1,"aabb1");
-		DebugV3(S.origin, "ori");
-		DebugV3(S.diff, "diff");
-
+		DebugBezier(B, "bezier");
 #pragma endregion
 
-		if (InCollision(aabb1,S,VP,viewportM)) {
-			color = RED;
-		}
-		else {
-			color = WHITE;
-		}
+		
 		///
 		/// ↑更新処理ここまで
 		///
@@ -719,8 +753,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		/// ↓描画処理ここから
 		///
 		
-		DrawAABB(aabb1,VP,viewportM,color);
-		DrawSegment(S, VP, viewportM, color);
+		DrawBezier(B, VP, viewportM, color);
 		///
 		/// ↑描画処理ここまで
 		///
