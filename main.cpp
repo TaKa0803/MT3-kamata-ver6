@@ -306,6 +306,7 @@ void DrawBezier(const Bezier& B, const Matrix4x4& VP, Matrix4x4 viewport,uint32_
 	}
 }
 
+
 //デバッグ関数
 void DebugSphere(Sphere& S,const char*label) {
 	ImGui::Begin(label);
@@ -696,13 +697,26 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		.rotation{0.26f,0,0},
 		.scale{1,1,1}
 	};
-	uint32_t color = WHITE;
+	//uint32_t color = WHITE;
 	
 #pragma region 授業
-	Bezier B{
-		.controllP0{0,0,0},
-		.controllP1{1,1,0},
-		.controllP2{2,0,0}
+	
+	Vector3 translate[3] = {
+		{0.2f,1.0f,0.0f},
+		{0.4f,0.0f,0.0f},
+		{0.3f,0.0f,0.0f}
+	};
+
+	Vector3 rotates[3] = {
+		{0.0f,0.0f,-6.8f},
+		{0.0f,0.0f,-1.4f},
+		{0.0f,0.0f,0.0f}
+	};
+
+	Vector3 scales[3] = {
+		{1.0f,1.0f,1.0f},
+		{1.0f,1.0f,1.0f},
+		{1.0f,1.0f,1.0f},
 	};
 #pragma endregion
 
@@ -741,7 +755,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		Matrix4x4 VP = Multiply(viewM, projectionM);
 		
 #pragma region jugyou
-		DebugBezier(B, "bezier");
+		ImGui::Begin("a");
+		ImGui::DragFloat3("trans0", &translate[0].x, 0.01f);
+		ImGui::DragFloat3("trans1", &translate[1].x, 0.01f);
+		ImGui::DragFloat3("trans2", &translate[2].x, 0.01f);
+		ImGui::DragFloat3("R0", &rotates[0].x, 0.01f);
+		ImGui::DragFloat3("R1", &rotates[1].x, 0.01f);
+		ImGui::DragFloat3("R2", &rotates[2].x, 0.01f);
+		ImGui::End();
 #pragma endregion
 
 		
@@ -752,8 +773,31 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		///
 		/// ↓描画処理ここから
 		///
+		Matrix4x4 L0 = MakeAffineM(scales[0], rotates[0], translate[0]);
+		Matrix4x4 L1 = MakeAffineM(scales[1], rotates[1], translate[1]);
+		Matrix4x4 L2 = MakeAffineM(scales[2], rotates[2], translate[2]);
+
+		L1 = Multiply(L1, L0);
+		L2 = Multiply(L2, L1);
+
+		//Matrix4x4 vpL0 = Multiply(L0, VP);
+		//Matrix4x4 vpL1 = Multiply(L1, VP);
+		//Matrix4x4 vpL2 = Multiply(L2, VP);
+
 		
-		DrawBezier(B, VP, viewportM, color);
+		DrawSphere({ .center = {L0.m[3][0],L0.m[3][1],L0.m[3][2]},.radius = 0.1f }, VP, viewportM, RED);
+		DrawSphere({ .center = {L1.m[3][0],L1.m[3][1],L1.m[3][2]},.radius = 0.1f }, VP, viewportM, GREEN);
+		DrawSphere({ .center = {L2.m[3][0],L2.m[3][1],L2.m[3][2]},.radius = 0.1f }, VP, viewportM, BLUE);
+
+		Vector3 p1, p2, p3;
+		p1 = Transform(Transform({ L0.m[3][0],L0.m[3][1],L0.m[3][2] }, VP), viewportM);
+		p2 = Transform(Transform({ L1.m[3][0],L1.m[3][1],L1.m[3][2] }, VP), viewportM);
+		p3 = Transform(Transform({ L2.m[3][0],L2.m[3][1],L2.m[3][2] }, VP), viewportM);
+
+
+		Novice::DrawLine((int)p1.x, (int)p1.y, (int)p2.x, (int)p2.y, WHITE);
+		Novice::DrawLine((int)p3.x, (int)p3.y, (int)p2.x, (int)p2.y, WHITE);
+
 		///
 		/// ↑描画処理ここまで
 		///
