@@ -7,6 +7,7 @@
 #include<imgui.h>
 #include <algorithm>
 #include<iostream>
+#include<cassert>
 struct vec {
 	int x;
 	int y;
@@ -173,7 +174,15 @@ Vector3 Perpendicular(const Vector3& vector) {
 	}
 	return{ 0.0f,-vector.z,vector.y };
 }
+//線描画
+void DrawSegment(const Segment& S, const Matrix4x4& vpM, const Matrix4x4& viewport, uint32_t color) {
+	Vector3 st, ed;
+	st = Transform(Transform(S.origin, vpM), viewport);
+	ed = Transform(Transform(Add(S.origin,S.diff), vpM), viewport);
 
+	Novice::DrawLine((int)st.x, (int)st.y, (int)ed.x, (int)ed.y, color);
+}
+//面描画
 void DrawPlane(const Plane& plane, const Matrix4x4& viewprojectionM, const Matrix4x4& viewportM,uint32_t color) {
 	Vector3 center = Multiply(plane.distance, plane.normal);
 	Vector3 perpendiculars[4];
@@ -193,7 +202,7 @@ void DrawPlane(const Plane& plane, const Matrix4x4& viewprojectionM, const Matri
 	Novice::DrawLine((int)points[1].x, (int)points[1].y, (int)points[2].x, (int)points[2].y, color);
 	Novice::DrawLine((int)points[1].x, (int)points[1].y, (int)points[3].x, (int)points[3].y, color);
 }
-
+//三角形描画
 void DrawTriangle(const Triangle& triangle, const Matrix4x4& viewprojectionM, const Matrix4x4& viewport,uint32_t color) {
 	Vector3 reP[3];
 	for (int i = 0; i < 3; i++) {
@@ -205,7 +214,7 @@ void DrawTriangle(const Triangle& triangle, const Matrix4x4& viewprojectionM, co
 
 }
 
-
+//AABB描画
 void DrawAABB(const AABB& aabb, const Matrix4x4& vpMatrix, const Matrix4x4& viewportMatrix, uint32_t color) {
 	Vector3 a, b, c, d, e, f, g, h;
 
@@ -240,7 +249,7 @@ void DrawAABB(const AABB& aabb, const Matrix4x4& vpMatrix, const Matrix4x4& view
 	Novice::DrawLine((int)h.x, (int)h.y, (int)g.x, (int)g.y, color);
 
 }
-
+//入れ替わりチェック
 void CheckswitchAABB(AABB& a) {
 	Vector3 max, min;
 	min.x = (std::min)(a.min.x, a.max.x);
@@ -255,7 +264,9 @@ void CheckswitchAABB(AABB& a) {
 
 }
 
-
+Vector3 operator+(Vector3 a, Vector3 b) {
+	return Add(a, b);
+}
 
 //デバッグ関数
 void DebugSphere(Sphere& S,const char*label) {
@@ -430,8 +441,6 @@ bool InCollision(const Segment& segment, const Plane& plane, const Matrix4x4& vp
 		else {
 			return false;
 		}
-
-		
 	}
 }
 //線と三角形
@@ -508,7 +517,103 @@ bool InCollision(const AABB& a, const Sphere& s, const Matrix4x4& vpMatrix, cons
 	return false;
 }
 
+float ParameterT(Plane P,Segment S) {
+	//法線と線の内積
+	float dot = Dot(P.normal, S.diff);
+	if (dot == 0.0f) {
+		return 0;
+	}
 
+	
+	//tを求める
+	float t = (P.distance - Dot(S.origin, P.normal)) / dot;
+
+	return t;
+}
+
+bool InCollision(const AABB& AA, const Segment& S) {
+
+	//assert(S.diff == { 0,0,0 });
+
+	//Xplaneと線の点
+	Vector3 bx, by, bz;
+
+	bx = { 1,0,0 };
+	by = { 0,1,0 };
+	bz = { 0,0,1 };
+	/*
+	float tXmin = ParameterT({ bx,AA.min.x }, S);
+	float tXmax = ParameterT({ bx,AA.max.x }, S);
+
+	float tYmin = ParameterT({ by,AA.min.y }, S);
+	float tYmax = ParameterT({ by,AA.max.y }, S);
+
+	float tZmin = ParameterT({ bz,AA.min.z }, S);
+	float tZmax = ParameterT({ bz,AA.max.z }, S);
+
+
+	Vector3 a1,a2, b1,b2, c1,c2;
+
+	a1 = Add(S.origin, Multiply(tXmin, S.diff));
+	a2 = Add(S.origin, Multiply(tXmax, S.diff));
+
+	b1 = Add(S.origin, Multiply(tYmin, S.diff));
+	b2 = Add(S.origin, Multiply(tYmax, S.diff));
+
+	c1 = Add(S.origin, Multiply(tZmin, S.diff));
+	c2 = Add(S.origin, Multiply(tZmax, S.diff));
+
+	Vector3 LS = S.origin;
+	Vector3 LE = Add(S.origin, S.diff);
+
+	if (PointInLine(a1, LS, LE) || PointInLine(a2, LS, LE) || PointInLine(b1, LS, LE) || PointInLine(b2, LS, LE) || PointInLine(c1, LS, LE) || PointInLine(c2, LS, LE)) {
+		return true;
+	}
+	*/
+
+	
+	//tを求める
+	float tXmin = (AA.min.x - S.origin.x) / Dot(bx,S.diff);
+	float tYmin = (AA.min.y - S.origin.y) / Dot(by,S.diff);
+	float tZmin = (AA.min.z - S.origin.z) / Dot(bz,S.diff);
+
+	float tXmax = (AA.max.x - S.origin.x) / Dot(bx,S.diff);
+	float tYmax = (AA.max.y - S.origin.y) / Dot(by,S.diff);
+	float tZmax = (AA.max.z - S.origin.z) / Dot(bz,S.diff);
+
+
+	float tNearX = min(tXmin, tXmax);
+	float tNearY = min(tYmin, tYmax);
+	float tNearZ = min(tZmin, tZmax);
+
+	float tFarX = max(tXmin, tXmax);
+	float tFarY = max(tYmin, tYmax);
+	float tFarZ = max(tZmin, tZmax);
+
+
+	float tmin = max(max(tNearX, tNearY), tNearZ);
+	float tmax = min(min(tFarX, tFarY), tFarZ);
+	if (tmin <= tmax) {
+		//衝突
+		return true;
+	}
+	
+	/*
+	//最近接点
+	Vector3 a = Add(S.origin, Multiply(t, S.diff));
+	Sphere Sph = {
+		.center{a},
+		.radius = 0.01f,
+	};
+	DrawSphere(Sph, VP, Vport, WHITE);
+
+	//線分内に点があるかチェック
+	if (PointInLine(a, AA.min, AA.max)) {
+		return true;//早期リターン
+	}
+	*/
+	return false;
+}
 
 
 // Windowsアプリでのエントリーポイント(main関数)
@@ -535,12 +640,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 #pragma region 授業
 	AABB aabb1{
 		.min{-0.5f,-0.5f,-0.5f},
-		.max{0.0f,0.0f,0.0f},
+		.max{0.5f,0.5f,0.5f},
 	};
 
-	Sphere S{
-		.center{0,0,0},
-		.radius{0.5},
+	Segment S{
+		.origin{0,0,0},
+		.diff{1,1,1},
 	};
 #pragma endregion
 
@@ -580,11 +685,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		
 #pragma region jugyou
 		DebugAABB(aabb1,"aabb1");
-		DebugSphere(S, "Sphere");
-		
+		DebugV3(S.origin, "ori");
+		DebugV3(S.diff, "diff");
+
 #pragma endregion
 
-		if (InCollision(aabb1,S,VP,viewportM)) {
+		if (InCollision(aabb1,S)) {
 			color = RED;
 		}
 		else {
@@ -599,7 +705,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		///
 		
 		DrawAABB(aabb1,VP,viewportM,color);
-		DrawSphere(S, VP, viewportM, color);
+		DrawSegment(S, VP, viewportM, color);
 		///
 		/// ↑描画処理ここまで
 		///
