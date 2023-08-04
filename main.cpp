@@ -80,6 +80,15 @@ struct Ball {
 	unsigned int color;
 };
 
+struct  Pendulum
+{
+	Vector3 anchor;//アンカー
+	float length;//ひもの長さ
+	float angle;//現在の角度
+	float angularVelocity;
+	float angularAcceleration;
+};
+
 const char kWindowTitle[] = "LE2A_05_キクチ_タカヤ";
 
 static const int kRowHeight = 20;
@@ -724,23 +733,23 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	//uint32_t color = WHITE;
 	
 #pragma region 授業
-	float theta = 0.0f;
-	Vector3 center = { 0,0,0 };
-	float r = 0.8f;
+	
+	Sphere S{
+		.center = {0,0},
+		.radius = 0.08f,
+	};
 
-	Ball ball{};
-	ball.position = {center.x+r*std::cos(theta),center.y+r*std::sin(theta),0.0f};
-	ball.mass = 2.0f;
-	ball.radius = 0.05f;
-	ball.color = BLUE;
+	Pendulum pendu;
+	pendu.anchor = { 0,1.0f,1.0f };
+	pendu.length = 0.8f;
+	pendu.angle = 0.7f;
+	pendu.angularVelocity = 0.0f;
+	pendu.angularAcceleration = 0.0f;
+
 
 	float deltaTime = 1.0f / 60.0f;
-	float angularVelocity = 3.14f;
-	
-	float w = angularVelocity * deltaTime;
-	
-	float angle = 0.0f;
 
+	//float w = deltaTime * 3.14f;
 
 #pragma endregion
 
@@ -790,24 +799,23 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 #pragma endregion
 
 		if (start) {
-			//theta += (float)std::numbers::pi * deltaTime;
-			angle += w;
-			ball.acceleration = { -r * (w * w) * std::cos(angle), -r * (w * w) * std::sin(angle) };
-
-			//ball.velocity = Add(ball.velocity, ball.acceleration);
-
-			ball.velocity = { -r * w * std::sin(angle),r * w * std::cos(angle),0 };
 			
-			ball.position = Add(ball.position, ball.velocity);
+			//pendu.angle += w;
 
-			//ball.position = { center.x + r * std::cos(angle),center.y + r * std::sin(angle),center.z };
-		
+			pendu.angularAcceleration = -(9.8f / pendu.length) * std::sin(pendu.angle);
+			pendu.angularVelocity += pendu.angularAcceleration * deltaTime;
+			pendu.angle += pendu.angularVelocity * deltaTime;
+
+			//pは振り子の先端の位置
+			S.center.x = pendu.anchor.x + std::sin(pendu.angle) * pendu.length;
+			S.center.y = pendu.anchor.y - std::cos(pendu.angle) * pendu.length;
+			S.center.z = pendu.anchor.z;
+
+			
+			
 		}
 
-		Sphere s{
-			.center = ball.position,
-			.radius = ball.radius,
-		};
+		
 
 
 		///
@@ -815,11 +823,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		///
 		DrawGrid(VP, viewportM);
 
-		DrawSphere(s, VP, viewportM, ball.color);
+		DrawSphere(S, VP, viewportM, WHITE);
 
 
+		Vector3 st = Transform(Transform(S.center, VP), viewportM);
+		Vector3 ed = Transform(Transform(pendu.anchor, VP), viewportM);
 
-		
+		Novice::DrawLine((int)st.x, (int)st.y, (int)ed.x, (int)ed.y, WHITE);
 		///
 		/// ↓描画処理ここから
 		///
