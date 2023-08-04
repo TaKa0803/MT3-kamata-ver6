@@ -733,6 +733,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	float deltaTime = 1.0f / 60.0f;
 #pragma endregion
 
+	bool start = false;
 	
 
 	// ウィンドウの×ボタンが押されるまでループ
@@ -769,24 +770,28 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 #pragma region jugyou
 		ImGui::Begin("Window");
 		
-
+		if (ImGui::Button("start")) {
+			start = true;
+		}
 		ImGui::End();
 #pragma endregion
-		Vector3 diff = ball.position - spring.anchor;
-		float length = Length(diff);
-		if (length != 0.0f) {
-			Vector3 direction = Normalize(diff);
-			Vector3 restPosition = spring.anchor + direction * spring.naturalLength;
-			Vector3 displacement = length * (ball.position - restPosition);
-			Vector3 restoringForce = -spring.stiffness * displacement;
-			//減衰抵抗を計算する
-			Vector3 dampingForce = -spring.dampingCoefficient * ball.velocity;
-			Vector3 force = restoringForce + dampingForce;
-			ball.acceleration = force / ball.mass;
+		if (start) {
+			Vector3 diff = ball.position - spring.anchor;
+			float length = Length(diff);
+			if (length != 0.0f) {
+				Vector3 direction = Normalize(diff);
+				Vector3 restPosition = spring.anchor + direction * spring.naturalLength;
+				Vector3 displacement = length * (ball.position - restPosition);
+				Vector3 restoringForce = -spring.stiffness * displacement;
+				//減衰抵抗を計算する
+				Vector3 dampingForce = -spring.dampingCoefficient * ball.velocity;
+				Vector3 force = restoringForce + dampingForce;
+				ball.acceleration = force / ball.mass;
+			}
+			ball.velocity = Add(ball.velocity, ball.acceleration * deltaTime);
+			ball.position = Add(ball.position, ball.velocity * deltaTime);
 		}
-		ball.velocity =Add(ball.velocity,ball.acceleration * deltaTime);
-		ball.position =Add(ball.position, ball.velocity * deltaTime);
-		
+
 		Sphere s{
 			.center = ball.position,
 			.radius = ball.radius,
