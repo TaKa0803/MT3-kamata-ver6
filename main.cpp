@@ -710,27 +710,38 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		.now{0,0},
 		.before{0,0}
 	};
-	WorldTransform camera = {
-		.translation{0,1.9f,-6.49f},
+	WorldTransform pointCam{
+		.translation{0,0,0},
 		.rotation{0.26f,0,0},
+		.scale{1,1,1}
+	};
+
+	WorldTransform camera = {
+		.translation{0,0,-6.49f},
+		.rotation{0,0,0},
 		.scale{1,1,1}
 	};
 	//uint32_t color = WHITE;
 	
 #pragma region 授業
-	Spring spring{};
-	spring.anchor = { 0.0f,0.0f,0.0f };
-	spring.naturalLength = 1.0f;
-	spring.stiffness = 100.0f;
-	spring.dampingCoefficient = 2.0f;
+	float theta = 0.0f;
+	Vector3 center = { 0,0,0 };
+	float r = 0.8f;
 
 	Ball ball{};
-	ball.position = { 1.2f,0.0f,0.0f };
+	ball.position = {center.x+r*std::cos(theta),center.y+r*std::sin(theta),0.0f};
 	ball.mass = 2.0f;
 	ball.radius = 0.05f;
 	ball.color = BLUE;
 
 	float deltaTime = 1.0f / 60.0f;
+	float angularVelocity = 3.14f;
+	
+	float w = angularVelocity * deltaTime;
+	
+	float angle = 0.0f;
+
+
 #pragma endregion
 
 	bool start = false;
@@ -751,7 +762,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		
 		ImGui::Begin("Wnd");
 		ImGui::DragFloat3("C trans", &camera.translation.x, 0.01f);
-		ImGui::DragFloat3("C rotate", &camera.rotation.x, 0.01f);
+		ImGui::DragFloat3("C rotate", &pointCam.rotation.x, 0.01f);
 		ImGui::End();
 
 		
@@ -760,6 +771,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		///
 		//Matrix4x4 worldM = MakeAffineM({ 1.0f,1.0f,1.0f }, rotate, translate);
 		Matrix4x4 cameraM = MakeAffineM(camera.scale,camera.rotation,camera.translation);
+		Matrix4x4 PCM = MakeAffineM(pointCam.scale, pointCam.rotation, pointCam.translation);
+		cameraM = Multiply(cameraM, PCM);
 		Matrix4x4 viewM = Inverse(cameraM);
 
 		Matrix4x4 projectionM = MakePerspectiveFovM(0.45f,float(kWindowWidth)/float(kWindowHeight),0.1f,100.0f);
@@ -775,21 +788,16 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		}
 		ImGui::End();
 #pragma endregion
+
 		if (start) {
-			Vector3 diff = ball.position - spring.anchor;
-			float length = Length(diff);
-			if (length != 0.0f) {
-				Vector3 direction = Normalize(diff);
-				Vector3 restPosition = spring.anchor + direction * spring.naturalLength;
-				Vector3 displacement = length * (ball.position - restPosition);
-				Vector3 restoringForce = -spring.stiffness * displacement;
-				//減衰抵抗を計算する
-				Vector3 dampingForce = -spring.dampingCoefficient * ball.velocity;
-				Vector3 force = restoringForce + dampingForce;
-				ball.acceleration = force / ball.mass;
-			}
-			ball.velocity = Add(ball.velocity, ball.acceleration * deltaTime);
-			ball.position = Add(ball.position, ball.velocity * deltaTime);
+			theta += (float)std::numbers::pi * deltaTime;
+			angle += w;
+			ball.velocity = { -r * w * std::sin(angle),r * w * std::cos(angle),0 };
+			
+			ball.position = Add(ball.position, ball.velocity);
+
+			//ball.position = { center.x + r * std::cos(angle),center.y + r * std::sin(angle),center.z };
+		
 		}
 
 		Sphere s{
@@ -805,10 +813,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 		DrawSphere(s, VP, viewportM, ball.color);
 
-		Vector3 st = Transform(Transform(spring.anchor, VP), viewportM);
-		Vector3 ed = Transform(Transform(ball.position, VP), viewportM);
 
-		Novice::DrawLine((int)st.x, (int)st.y, (int)ed.x, (int)ed.y, WHITE);
+
+		
 		///
 		/// ↓描画処理ここから
 		///
