@@ -115,5 +115,6 @@
       <Filter>KamataEngine\Include</Filter>
     </ClInclude>
     <ClInclude Include="Matrix_V3math.h" />
+    <ClInclude Include="overload.h" />
   </ItemGroup>
 </Project>

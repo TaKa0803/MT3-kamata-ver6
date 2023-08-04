@@ -8,11 +8,9 @@
 #include <algorithm>
 #include<iostream>
 #include<cassert>
+#include"overload.h"
 
-//オーバーロード演算子
-Vector3 operator+(Vector3 a, Vector3 b) {
-	return Add(a, b);
-}
+
 
 
 struct vec {
@@ -684,6 +682,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	// ライブラリの初期化
 	Novice::Initialize(kWindowTitle, kWindowWidth, kWindowHeight);
 
+	
+
 	// キー入力結果を受け取る箱
 	char keys[256] = {0};
 	char preKeys[256] = {0};
@@ -700,24 +700,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	//uint32_t color = WHITE;
 	
 #pragma region 授業
-	
-	Vector3 translate[3] = {
-		{0.2f,1.0f,0.0f},
-		{0.4f,0.0f,0.0f},
-		{0.3f,0.0f,0.0f}
-	};
+	Vector3 a{ 0.2f,1.0f,0.0f };
+	Vector3 b{ 2.4f,3.1f,1.2f };
+	Vector3 c = a + b;
+	Vector3 d = a - b;
+	Vector3 e = a * 2.4f;
+	Vector3 rotate{ 0.4f,1.43f,-0.8f };
 
-	Vector3 rotates[3] = {
-		{0.0f,0.0f,-6.8f},
-		{0.0f,0.0f,-1.4f},
-		{0.0f,0.0f,0.0f}
-	};
-
-	Vector3 scales[3] = {
-		{1.0f,1.0f,1.0f},
-		{1.0f,1.0f,1.0f},
-		{1.0f,1.0f,1.0f},
-	};
+	Matrix4x4 RM = MakeAllRotateM(rotate);
 #pragma endregion
 
 
@@ -755,13 +745,16 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		Matrix4x4 VP = Multiply(viewM, projectionM);
 		
 #pragma region jugyou
-		ImGui::Begin("a");
-		ImGui::DragFloat3("trans0", &translate[0].x, 0.01f);
-		ImGui::DragFloat3("trans1", &translate[1].x, 0.01f);
-		ImGui::DragFloat3("trans2", &translate[2].x, 0.01f);
-		ImGui::DragFloat3("R0", &rotates[0].x, 0.01f);
-		ImGui::DragFloat3("R1", &rotates[1].x, 0.01f);
-		ImGui::DragFloat3("R2", &rotates[2].x, 0.01f);
+		ImGui::Begin("Window");
+		ImGui::Text("c:%f,%f,%f",c.x,c.y,c.z);
+		ImGui::Text("d:%f,%f,%f",d.x,d.y,d.z );
+		ImGui::Text("e:c:%f,%f,%f",e.x,e.y,e.z);
+		ImGui::Text("matrix:\nc:%f,%f,%f,%f\nc:%f,%f,%f,%f\nc:%f,%f,%f,%f\nc:%f,%f,%f,%f\n",
+			RM.m[0][0], RM.m[0][1], RM.m[0][2], RM.m[0][3],
+			RM.m[1][0], RM.m[1][1], RM.m[1][2], RM.m[1][3], 
+			RM.m[2][0], RM.m[2][1], RM.m[2][2], RM.m[2][3], 
+			RM.m[3][0], RM.m[3][1], RM.m[3][2], RM.m[3][3] );
+
 		ImGui::End();
 #pragma endregion
 
@@ -773,31 +766,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		///
 		/// ↓描画処理ここから
 		///
-		Matrix4x4 L0 = MakeAffineM(scales[0], rotates[0], translate[0]);
-		Matrix4x4 L1 = MakeAffineM(scales[1], rotates[1], translate[1]);
-		Matrix4x4 L2 = MakeAffineM(scales[2], rotates[2], translate[2]);
-
-		L1 = Multiply(L1, L0);
-		L2 = Multiply(L2, L1);
-
-		//Matrix4x4 vpL0 = Multiply(L0, VP);
-		//Matrix4x4 vpL1 = Multiply(L1, VP);
-		//Matrix4x4 vpL2 = Multiply(L2, VP);
+		
 
 		
-		DrawSphere({ .center = {L0.m[3][0],L0.m[3][1],L0.m[3][2]},.radius = 0.1f }, VP, viewportM, RED);
-		DrawSphere({ .center = {L1.m[3][0],L1.m[3][1],L1.m[3][2]},.radius = 0.1f }, VP, viewportM, GREEN);
-		DrawSphere({ .center = {L2.m[3][0],L2.m[3][1],L2.m[3][2]},.radius = 0.1f }, VP, viewportM, BLUE);
+		
+		
+		
 
-		Vector3 p1, p2, p3;
-		p1 = Transform(Transform({ L0.m[3][0],L0.m[3][1],L0.m[3][2] }, VP), viewportM);
-		p2 = Transform(Transform({ L1.m[3][0],L1.m[3][1],L1.m[3][2] }, VP), viewportM);
-		p3 = Transform(Transform({ L2.m[3][0],L2.m[3][1],L2.m[3][2] }, VP), viewportM);
-
-
-		Novice::DrawLine((int)p1.x, (int)p1.y, (int)p2.x, (int)p2.y, WHITE);
-		Novice::DrawLine((int)p3.x, (int)p3.y, (int)p2.x, (int)p2.y, WHITE);
-
+		
 		///
 		/// ↑描画処理ここまで
 		///
