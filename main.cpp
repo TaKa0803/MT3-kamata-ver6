@@ -62,6 +62,24 @@ struct Bezier {
 
 };
 
+struct Spring
+{
+	//アンカー
+	Vector3 anchor;
+	float naturalLength;//自然長
+	float stiffness;//ばね定数
+	float dampingCoefficient;
+};
+
+struct Ball {
+	Vector3 position;
+	Vector3 velocity;
+	Vector3 acceleration;
+	float mass;
+	float radius;
+	unsigned int color;
+};
+
 const char kWindowTitle[] = "LE2A_05_キクチ_タカヤ";
 
 static const int kRowHeight = 20;
@@ -700,18 +718,22 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	//uint32_t color = WHITE;
 	
 #pragma region 授業
-	Vector3 a{ 0.2f,1.0f,0.0f };
-	Vector3 b{ 2.4f,3.1f,1.2f };
-	Vector3 c = a + b;
-	Vector3 d = a - b;
-	Vector3 e = a * 2.4f;
-	Vector3 rotate{ 0.4f,1.43f,-0.8f };
+	Spring spring{};
+	spring.anchor = { 0.0f,0.0f,0.0f };
+	spring.naturalLength = 1.0f;
+	spring.stiffness = 100.0f;
+	spring.dampingCoefficient = 2.0f;
 
-	Matrix4x4 RM = MakeAllRotateM(rotate);
+	Ball ball{};
+	ball.position = { 1.2f,0.0f,0.0f };
+	ball.mass = 2.0f;
+	ball.radius = 0.05f;
+	ball.color = BLUE;
+
+	float deltaTime = 1.0f / 60.0f;
 #pragma endregion
 
-
-
+	
 
 	// ウィンドウの×ボタンが押されるまでループ
 	while (Novice::ProcessMessage() == 0) {
@@ -746,23 +768,42 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		
 #pragma region jugyou
 		ImGui::Begin("Window");
-		ImGui::Text("c:%f,%f,%f",c.x,c.y,c.z);
-		ImGui::Text("d:%f,%f,%f",d.x,d.y,d.z );
-		ImGui::Text("e:c:%f,%f,%f",e.x,e.y,e.z);
-		ImGui::Text("matrix:\nc:%f,%f,%f,%f\nc:%f,%f,%f,%f\nc:%f,%f,%f,%f\nc:%f,%f,%f,%f\n",
-			RM.m[0][0], RM.m[0][1], RM.m[0][2], RM.m[0][3],
-			RM.m[1][0], RM.m[1][1], RM.m[1][2], RM.m[1][3], 
-			RM.m[2][0], RM.m[2][1], RM.m[2][2], RM.m[2][3], 
-			RM.m[3][0], RM.m[3][1], RM.m[3][2], RM.m[3][3] );
+		
 
 		ImGui::End();
 #pragma endregion
-
+		Vector3 diff = ball.position - spring.anchor;
+		float length = Length(diff);
+		if (length != 0.0f) {
+			Vector3 direction = Normalize(diff);
+			Vector3 restPosition = spring.anchor + direction * spring.naturalLength;
+			Vector3 displacement = length * (ball.position - restPosition);
+			Vector3 restoringForce = -spring.stiffness * displacement;
+			//減衰抵抗を計算する
+			Vector3 dampingForce = -spring.dampingCoefficient * ball.velocity;
+			Vector3 force = restoringForce + dampingForce;
+			ball.acceleration = force / ball.mass;
+		}
+		ball.velocity =Add(ball.velocity,ball.acceleration * deltaTime);
+		ball.position =Add(ball.position, ball.velocity * deltaTime);
 		
+		Sphere s{
+			.center = ball.position,
+			.radius = ball.radius,
+		};
+
+
 		///
 		/// ↑更新処理ここまで
 		///
 		DrawGrid(VP, viewportM);
+
+		DrawSphere(s, VP, viewportM, ball.color);
+
+		Vector3 st = Transform(Transform(spring.anchor, VP), viewportM);
+		Vector3 ed = Transform(Transform(ball.position, VP), viewportM);
+
+		Novice::DrawLine((int)st.x, (int)st.y, (int)ed.x, (int)ed.y, WHITE);
 		///
 		/// ↓描画処理ここから
 		///
