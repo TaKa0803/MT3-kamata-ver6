@@ -790,8 +790,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 #pragma endregion
 
 		if (start) {
-			theta += (float)std::numbers::pi * deltaTime;
+			//theta += (float)std::numbers::pi * deltaTime;
 			angle += w;
+			ball.acceleration = { -r * (w * w) * std::cos(angle), -r * (w * w) * std::sin(angle) };
+
+			//ball.velocity = Add(ball.velocity, ball.acceleration);
+
 			ball.velocity = { -r * w * std::sin(angle),r * w * std::cos(angle),0 };
 			
 			ball.position = Add(ball.position, ball.velocity);
